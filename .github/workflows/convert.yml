@@ -1,1 +1,70 @@
+name: Convert video to Bedrock addon
 
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Direct video link (.mp4). Leave empty to use a video file uploaded in the repo root"
+        required: false
+        default: ""
+      name:
+        description: "Addon name (letters and numbers only)"
+        required: true
+        default: "MyVideo"
+      width:
+        description: "Frame width in pixels (160 to 256)"
+        required: true
+        default: "160"
+      fps:
+        description: "Frames per second (6 to 12)"
+        required: true
+        default: "8"
+      seconds:
+        description: "Max length in seconds"
+        required: true
+        default: "30"
+      start:
+        description: "Start time in seconds"
+        required: true
+        default: "0"
+      loop:
+        description: "Loop the picture"
+        type: boolean
+        default: false
+      flip:
+        description: "Mirror the picture"
+        type: boolean
+        default: false
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install yt-dlp
+      - name: Convert
+        env:
+          V_URL: ${{ inputs.url }}
+          V_NAME: ${{ inputs.name }}
+          V_WIDTH: ${{ inputs.width }}
+          V_FPS: ${{ inputs.fps }}
+          V_SECONDS: ${{ inputs.seconds }}
+          V_START: ${{ inputs.start }}
+          V_LOOP: ${{ inputs.loop }}
+          V_FLIP: ${{ inputs.flip }}
+        run: |
+          ARGS=(--name "$V_NAME" --width "$V_WIDTH" --fps "$V_FPS" --seconds "$V_SECONDS" --start "$V_START")
+          if [ "$V_LOOP" = "true" ]; then ARGS+=(--loop); fi
+          if [ "$V_FLIP" = "true" ]; then ARGS+=(--flip); fi
+          if [ -n "$V_URL" ]; then ARGS+=(--url "$V_URL"); fi
+          python convert.py "${ARGS[@]}"
+      - name: Upload addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: MineVideo-addon
+          path: out/*.mcaddon
+          
